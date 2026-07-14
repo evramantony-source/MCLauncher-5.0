@@ -28,7 +28,10 @@ def resolve_namespace(module: Path, manifest: Path) -> str:
     for gradle in (module / "build.gradle.kts", module / "build.gradle"):
         if not gradle.exists():
             continue
+
         text = gradle.read_text(encoding="utf-8", errors="ignore")
+
+        # Direct Gradle declarations.
         for pattern in (
             r'namespace\s*=\s*"([^"]+)"',
             r"namespace\s+'([^']+)'",
@@ -39,9 +42,46 @@ def resolve_namespace(module: Path, manifest: Path) -> str:
             if match:
                 return match.group(1)
 
+        # Kotlin DSL variable declarations, including Zalith's:
+        # val zalithPackageName = "com.movtery.zalithlauncher"
+        # namespace = zalithPackageName
+        variables = dict(
+            re.findall(
+                r'(?:val|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"([^"]+)"',
+                text,
+            )
+        )
+
+        for assignment in ("namespace", "applicationId"):
+            match = re.search(
+                rf'{assignment}\s*=\s*([A-Za-z_][A-Za-z0-9_]*)',
+                text,
+            )
+            if match and match.group(1) in variables:
+                return variables[match.group(1)]
+
+        if "zalithPackageName" in variables:
+            return variables["zalithPackageName"]
+
     package = ET.parse(manifest).getroot().get("package")
     if package:
         return package
+
+    for source_root in (module / "src/main/java", module / "src/main/kotlin"):
+        if not source_root.exists():
+            continue
+        for source in source_root.rglob("*"):
+            if source.suffix not in {".kt", ".java"}:
+                continue
+            source_text = source.read_text(encoding="utf-8", errors="ignore")
+            match = re.search(
+                r'^package\s+([A-Za-z_][A-Za-z0-9_.]*)',
+                source_text,
+                flags=re.MULTILINE,
+            )
+            if match:
+                return match.group(1)
+
     fail("Could not resolve Android namespace.")
 
 
@@ -53,47 +93,43 @@ def qualify(name: str, namespace: str) -> str:
     return name
 
 
+def is_launcher_filter(intent: ET.Element) -> bool:
+    actions = {n.get(ANDROID + "name") for n in intent.findall("action")}
+    categories = {n.get(ANDROID + "name") for n in intent.findall("category")}
+    return (
+        "android.intent.action.MAIN" in actions
+        and "android.intent.category.LAUNCHER" in categories
+    )
+
+
 def find_original_launcher(manifest: Path, namespace: str) -> str:
     tree = ET.parse(manifest)
     app = tree.getroot().find("application")
     if app is None:
         fail("Manifest has no application element.")
 
-    for activity in app.findall("activity"):
-        for intent in activity.findall("intent-filter"):
-            actions = {n.get(ANDROID + "name") for n in intent.findall("action")}
-            categories = {n.get(ANDROID + "name") for n in intent.findall("category")}
-            if (
-                "android.intent.action.MAIN" in actions
-                and "android.intent.category.LAUNCHER" in categories
-            ):
-                raw = activity.get(ANDROID + "name")
+    for tag in ("activity", "activity-alias"):
+        for component in app.findall(tag):
+            if any(is_launcher_filter(intent) for intent in component.findall("intent-filter")):
+                raw = component.get(ANDROID + "name")
                 if not raw:
-                    fail("Original launcher activity has no android:name.")
+                    fail("Original launcher component has no android:name.")
                 return qualify(raw, namespace)
 
-    fail("Could not locate original launcher activity.")
+    fail("Could not locate original launcher activity or alias.")
 
 
-def patch_manifest(
-    manifest: Path,
-    namespace: str,
-    custom_class: str
-) -> None:
+def patch_manifest(manifest: Path, namespace: str, custom_class: str) -> None:
     tree = ET.parse(manifest)
     app = tree.getroot().find("application")
     if app is None:
         fail("Manifest has no application element.")
 
-    for activity in app.findall("activity"):
-        for intent in list(activity.findall("intent-filter")):
-            actions = {n.get(ANDROID + "name") for n in intent.findall("action")}
-            categories = {n.get(ANDROID + "name") for n in intent.findall("category")}
-            if (
-                "android.intent.action.MAIN" in actions
-                and "android.intent.category.LAUNCHER" in categories
-            ):
-                activity.remove(intent)
+    for tag in ("activity", "activity-alias"):
+        for component in app.findall(tag):
+            for intent in list(component.findall("intent-filter")):
+                if is_launcher_filter(intent):
+                    component.remove(intent)
 
     fqcn = f"{namespace}.{custom_class}"
     custom = ET.Element("activity")
@@ -108,6 +144,34 @@ def patch_manifest(
 
     app.insert(0, custom)
     tree.write(manifest, encoding="utf-8", xml_declaration=True)
+
+
+def patch_gradle_properties(root: Path) -> int:
+    properties = root / "gradle.properties"
+    if not properties.exists():
+        return 0
+
+    text = properties.read_text(encoding="utf-8", errors="ignore")
+    replacements = {
+        "launcher_app_name": "MCLauncher",
+        "launcher_name": "MCLauncher",
+        "launcher_short_name": "MCL",
+    }
+    changed = 0
+
+    for key, value in replacements.items():
+        pattern = rf'(?m)^{re.escape(key)}=.*$'
+        if re.search(pattern, text):
+            updated = re.sub(pattern, f"{key}={value}", text)
+            if updated != text:
+                text = updated
+                changed += 1
+        else:
+            text += f"\n{key}={value}"
+            changed += 1
+
+    properties.write_text(text.rstrip() + "\n", encoding="utf-8")
+    return changed
 
 
 def patch_app_name(module: Path) -> int:
@@ -172,6 +236,7 @@ def main() -> None:
     source.write_text(code, encoding="utf-8")
 
     patch_manifest(manifest, namespace, custom_class)
+    property_count = patch_gradle_properties(root)
     label_count = patch_app_name(module)
     notice = add_notice_asset(module)
 
@@ -185,6 +250,7 @@ def main() -> None:
                 f"New launcher activity: {namespace}.{custom_class}",
                 f"Custom source: {source.relative_to(root)}",
                 f"Manifest: {manifest.relative_to(root)}",
+                f"Gradle properties patched: {property_count}",
                 f"App-name resource files patched: {label_count}",
                 f"Notice asset: {notice.relative_to(root)}",
                 "Runtime modules modified: no",
@@ -198,4 +264,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-  
+    
