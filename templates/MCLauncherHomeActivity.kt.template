@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,25 +17,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AccountCircle
-import androidx.compose.material.icons.rounded.BugReport
-import androidx.compose.material.icons.rounded.CloudDownload
-import androidx.compose.material.icons.rounded.Construction
-import androidx.compose.material.icons.rounded.Extension
-import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -45,7 +36,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -98,7 +88,7 @@ private fun MCLauncherHome(openRuntime: () -> Unit) {
                         onClick = openRuntime,
                         modifier = Modifier.padding(end = 12.dp)
                     ) {
-                        Icon(Icons.Rounded.AccountCircle, null)
+                        Text("●")
                         Spacer(Modifier.width(6.dp))
                         Text("Accounts")
                     }
@@ -135,18 +125,18 @@ private fun MCLauncherHome(openRuntime: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     QuickCard(
-                        "Content",
-                        "Mods, packs and shaders",
-                        Icons.Rounded.Extension,
-                        Modifier.weight(1f),
-                        openRuntime
+                        title = "Content",
+                        detail = "Mods, packs and shaders",
+                        symbol = "◆",
+                        modifier = Modifier.weight(1f),
+                        openRuntime = openRuntime
                     )
                     QuickCard(
-                        "Downloads",
-                        "Versions and tasks",
-                        Icons.Rounded.CloudDownload,
-                        Modifier.weight(1f),
-                        openRuntime
+                        title = "Downloads",
+                        detail = "Versions and tasks",
+                        symbol = "↓",
+                        modifier = Modifier.weight(1f),
+                        openRuntime = openRuntime
                     )
                 }
             }
@@ -156,18 +146,18 @@ private fun MCLauncherHome(openRuntime: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     QuickCard(
-                        "Settings",
-                        "Java, renderer and memory",
-                        Icons.Rounded.Settings,
-                        Modifier.weight(1f),
-                        openRuntime
+                        title = "Settings",
+                        detail = "Java, renderer and memory",
+                        symbol = "⚙",
+                        modifier = Modifier.weight(1f),
+                        openRuntime = openRuntime
                     )
                     QuickCard(
-                        "Diagnostics",
-                        "Logs and crash reports",
-                        Icons.Rounded.BugReport,
-                        Modifier.weight(1f),
-                        openRuntime
+                        title = "Diagnostics",
+                        detail = "Logs and crash reports",
+                        symbol = "!",
+                        modifier = Modifier.weight(1f),
+                        openRuntime = openRuntime
                     )
                 }
             }
@@ -202,7 +192,7 @@ private fun HeroCard(openRuntime: () -> Unit) {
             Text("Your Android Java launcher, instances and content in one place.")
             Spacer(Modifier.height(18.dp))
             Button(onClick = openRuntime) {
-                Icon(Icons.Rounded.PlayArrow, null)
+                Text("▶")
                 Spacer(Modifier.width(8.dp))
                 Text("Open runtime")
             }
@@ -226,7 +216,7 @@ private fun InstanceCard(openRuntime: () -> Unit) {
                     .background(Color(0xFF294C36), RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Rounded.Construction, null)
+                Text("⛏", style = MaterialTheme.typography.titleLarge)
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -247,17 +237,16 @@ private fun InstanceCard(openRuntime: () -> Unit) {
 private fun QuickCard(
     title: String,
     detail: String,
-    icon: ImageVector,
+    symbol: String,
     modifier: Modifier,
     openRuntime: () -> Unit
 ) {
     Card(
-        onClick = openRuntime,
-        modifier = modifier,
+        modifier = modifier.clickable(onClick = openRuntime),
         shape = RoundedCornerShape(20.dp)
     ) {
         Column(Modifier.padding(16.dp)) {
-            Icon(icon, null, Modifier.size(28.dp))
+            Text(symbol, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(14.dp))
             Text(title, fontWeight = FontWeight.Bold)
             Text(detail, style = MaterialTheme.typography.bodySmall)
@@ -273,7 +262,7 @@ private fun RuntimeCard(openRuntime: () -> Unit) {
     ) {
         Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Terminal, null)
+                Text(">_", fontWeight = FontWeight.Bold)
                 Spacer(Modifier.width(10.dp))
                 Text("Runtime foundation", fontWeight = FontWeight.Bold)
             }
@@ -287,7 +276,7 @@ private fun RuntimeCard(openRuntime: () -> Unit) {
                 onClick = openRuntime,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Rounded.Folder, null)
+                Text("□")
                 Spacer(Modifier.width(8.dp))
                 Text("Open runtime control center")
             }
