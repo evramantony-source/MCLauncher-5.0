@@ -1,0 +1,98 @@
+name: Build MCLauncher v0.1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main", "master" ]
+
+permissions:
+  contents: read
+
+env:
+  UPSTREAM_REPOSITORY: ZalithLauncher/ZalithLauncher2
+  UPSTREAM_REF: "2.4.3"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout MCLauncher overlay
+        uses: actions/checkout@v4
+
+      - name: Checkout runtime foundation
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.UPSTREAM_REPOSITORY }}
+          ref: ${{ env.UPSTREAM_REF }}
+          path: upstream
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Record upstream commit
+        run: git -C upstream rev-parse HEAD | tee UPSTREAM_COMMIT.txt
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Verify upstream modules and licence
+        run: |
+          test -d upstream/ZalithLauncher
+          test -d upstream/LWJGL
+          test -d upstream/LayerController
+          test -d upstream/Terracotta
+          test -s upstream/LICENSE
+          cp upstream/LICENSE UPSTREAM_LICENSE_COPY.txt
+
+      - name: Apply MCLauncher fork
+        run: |
+          python3 scripts/apply_mclauncher.py             --root upstream             --template templates/MCLauncherHomeActivity.kt.template
+
+      - name: Show patch report
+        run: cat upstream/MCLAUNCHER_PATCH_REPORT.txt
+
+      - name: Prepare Gradle
+        run: chmod +x upstream/gradlew
+
+      - name: Inspect Gradle projects
+        working-directory: upstream
+        run: ./gradlew --no-daemon projects
+
+      - name: Build debug APK
+        working-directory: upstream
+        run: ./gradlew --no-daemon :ZalithLauncher:assembleDebug
+
+      - name: Validate APK
+        run: |
+          mkdir -p output
+          APK="$(find upstream/ZalithLauncher/build/outputs/apk -type f -name '*debug*.apk' -size +1M | head -n 1)"
+          if [ -z "$APK" ]; then
+            echo "No non-empty debug APK was found."
+            find upstream/ZalithLauncher/build/outputs -type f || true
+            exit 1
+          fi
+
+          cp "$APK" output/MCLauncher-v0.1-debug.apk
+          test -s output/MCLauncher-v0.1-debug.apk
+          unzip -l output/MCLauncher-v0.1-debug.apk | grep -q 'classes.*dex'
+
+          cp UPSTREAM_NOTICES.md output/
+          cp UPSTREAM_LICENSE_COPY.txt output/
+          cp UPSTREAM_COMMIT.txt output/
+          cp upstream/MCLAUNCHER_PATCH_REPORT.txt output/
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: MCLauncher-v0.1-debug
+          path: output/
+          if-no-files-found: error
+          retention-days: 14
+          
