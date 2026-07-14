@@ -1,0 +1,7 @@
+upstream/
+output/
+.gradle/
+.idea/
+local.properties
+*.apk
+*.aab
