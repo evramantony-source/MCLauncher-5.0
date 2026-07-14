@@ -72,7 +72,7 @@ jobs:
       - name: Validate APK
         run: |
           mkdir -p output
-          APK="$(find upstream/ZalithLauncher/build/outputs/apk -type f -name '*debug*.apk' -size +1M | head -n 1)"
+          APK="$(find upstream/ZalithLauncher/build/outputs/apk/debug -type f -iname '*.apk' -size +1M -print -quit)"
           if [ -z "$APK" ]; then
             echo "No non-empty debug APK was found."
             find upstream/ZalithLauncher/build/outputs -type f || true
