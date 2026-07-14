@@ -190,6 +190,67 @@ def patch_app_name(module: Path) -> int:
     return patched
 
 
+def patch_problematic_string_formats(module: Path) -> int:
+    """
+    Fix upstream translated strings that contain multiple non-positional Java
+    format placeholders. Android expects numbered placeholders such as %1$s and
+    %2$d when a string has more than one substitution.
+    """
+    target_names = (
+        "file_invalid_length",
+        "terracotta_notification_desc",
+    )
+    name_group = "|".join(re.escape(name) for name in target_names)
+
+    string_pattern = re.compile(
+        rf'(<string\b[^>]*\bname="(?:{name_group})"[^>]*>)'
+        rf'(.*?)'
+        rf'(</string>)',
+        flags=re.DOTALL,
+    )
+    unnumbered_placeholder = re.compile(
+        r'(?<!%)%(?!%|\d+\$)([-#+ 0,(]*\d*(?:\.\d+)?[sSdDfF])'
+    )
+    numbered_placeholder = re.compile(r'%(?P<position>\d+)\$')
+
+    patched = 0
+    values_root = module / "src/main/res"
+
+    for xml_file in values_root.glob("values*/*.xml"):
+        original = xml_file.read_text(encoding="utf-8", errors="ignore")
+
+        def patch_string(match: re.Match[str]) -> str:
+            nonlocal patched
+            opening, body, closing = match.groups()
+
+            existing_positions = [
+                int(item.group("position"))
+                for item in numbered_placeholder.finditer(body)
+            ]
+            next_position = max(existing_positions, default=0) + 1
+
+            def number_placeholder(item: re.Match[str]) -> str:
+                nonlocal next_position
+                replacement = f"%{next_position}${item.group(1)}"
+                next_position += 1
+                return replacement
+
+            updated_body, count = unnumbered_placeholder.subn(
+                number_placeholder,
+                body,
+            )
+            if count:
+                patched += count
+                return opening + updated_body + closing
+            return match.group(0)
+
+        updated = string_pattern.sub(patch_string, original)
+        if updated != original:
+            xml_file.write_text(updated, encoding="utf-8")
+
+    return patched
+
+
 def add_notice_asset(module: Path) -> Path:
     target = module / "src/main/assets/mclauncher/UNOFFICIAL_MODIFIED_VERSION.txt"
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -238,6 +299,7 @@ def main() -> None:
     patch_manifest(manifest, namespace, custom_class)
     property_count = patch_gradle_properties(root)
     label_count = patch_app_name(module)
+    format_count = patch_problematic_string_formats(module)
     notice = add_notice_asset(module)
 
     report = root / "MCLAUNCHER_PATCH_REPORT.txt"
@@ -252,6 +314,7 @@ def main() -> None:
                 f"Manifest: {manifest.relative_to(root)}",
                 f"Gradle properties patched: {property_count}",
                 f"App-name resource files patched: {label_count}",
+                f"String format resources patched: {format_count}",
                 f"Notice asset: {notice.relative_to(root)}",
                 "Runtime modules modified: no",
                 "Original launcher activity preserved: yes",
