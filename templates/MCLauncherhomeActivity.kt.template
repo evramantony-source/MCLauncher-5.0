@@ -1,0 +1,296 @@
+package __PACKAGE__
+
+import android.content.Intent
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.Construction
+import androidx.compose.material.icons.rounded.Extension
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Terminal
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+
+class MCLauncherHomeActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MaterialTheme(
+                colorScheme = darkColorScheme(
+                    primary = Color(0xFF62D98B),
+                    secondary = Color(0xFF99E9B4),
+                    background = Color(0xFF0D0F11),
+                    surface = Color(0xFF171A1D),
+                    surfaceVariant = Color(0xFF22262A)
+                )
+            ) {
+                MCLauncherHome(
+                    openRuntime = {
+                        startActivity(
+                            Intent().setClassName(
+                                this@MCLauncherHomeActivity,
+                                "__ORIGINAL_ACTIVITY__"
+                            )
+                        )
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MCLauncherHome(openRuntime: () -> Unit) {
+    Scaffold(
+        containerColor = Color(0xFF0D0F11),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("MCLauncher", fontWeight = FontWeight.Bold)
+                        Text(
+                            "Unofficial Modified Version",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                },
+                actions = {
+                    FilledTonalButton(
+                        onClick = openRuntime,
+                        modifier = Modifier.padding(end = 12.dp)
+                    ) {
+                        Icon(Icons.Rounded.AccountCircle, null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Accounts")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            item { HeroCard(openRuntime) }
+            item {
+                Text(
+                    "Instances",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            item { InstanceCard(openRuntime) }
+            item {
+                Text(
+                    "Library",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            item {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    QuickCard(
+                        "Content",
+                        "Mods, packs and shaders",
+                        Icons.Rounded.Extension,
+                        Modifier.weight(1f),
+                        openRuntime
+                    )
+                    QuickCard(
+                        "Downloads",
+                        "Versions and tasks",
+                        Icons.Rounded.CloudDownload,
+                        Modifier.weight(1f),
+                        openRuntime
+                    )
+                }
+            }
+            item {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    QuickCard(
+                        "Settings",
+                        "Java, renderer and memory",
+                        Icons.Rounded.Settings,
+                        Modifier.weight(1f),
+                        openRuntime
+                    )
+                    QuickCard(
+                        "Diagnostics",
+                        "Logs and crash reports",
+                        Icons.Rounded.BugReport,
+                        Modifier.weight(1f),
+                        openRuntime
+                    )
+                }
+            }
+            item { RuntimeCard(openRuntime) }
+        }
+    }
+}
+
+@Composable
+private fun HeroCard(openRuntime: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        listOf(Color(0xFF246642), Color(0xFF163C29))
+                    )
+                )
+                .padding(22.dp)
+        ) {
+            Text(
+                "Minecraft: Java Edition",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(6.dp))
+            Text("Your Android Java launcher, instances and content in one place.")
+            Spacer(Modifier.height(18.dp))
+            Button(onClick = openRuntime) {
+                Icon(Icons.Rounded.PlayArrow, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Open runtime")
+            }
+        }
+    }
+}
+
+@Composable
+private fun InstanceCard(openRuntime: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .background(Color(0xFF294C36), RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Rounded.Construction, null)
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Select or create an instance", fontWeight = FontWeight.Bold)
+                Text(
+                    "Vanilla, Fabric, Forge, NeoForge, Quilt and legacy versions",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            FilledTonalButton(onClick = openRuntime) {
+                Text("Manage")
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickCard(
+    title: String,
+    detail: String,
+    icon: ImageVector,
+    modifier: Modifier,
+    openRuntime: () -> Unit
+) {
+    Card(
+        onClick = openRuntime,
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Icon(icon, null, Modifier.size(28.dp))
+            Spacer(Modifier.height(14.dp))
+            Text(title, fontWeight = FontWeight.Bold)
+            Text(detail, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun RuntimeCard(openRuntime: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(Modifier.padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Terminal, null)
+                Spacer(Modifier.width(10.dp))
+                Text("Runtime foundation", fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "Java runtimes, LWJGL, renderers, touch controls and game launch " +
+                    "remain powered by the integrated open-source runtime."
+            )
+            Spacer(Modifier.height(12.dp))
+            FilledTonalButton(
+                onClick = openRuntime,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Rounded.Folder, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Open runtime control center")
+            }
+        }
+    }
+}
